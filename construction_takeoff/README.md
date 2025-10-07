@@ -28,16 +28,20 @@ PYTHONPATH=construction_takeoff python -m takeoff.cli --trade concrete --input /
 
 An interactive web workspace is available for teams that prefer a visual workflow and richer UX.
 
-### Install UI dependencies
-
-```
-pip install fastapi uvicorn jinja2 python-multipart
-```
-
 ### Launch the interface
 
+Keep the virtual environment activated (`source .venv/bin/activate`) and start the development server using the helper script:
+
+```bash
+construction_takeoff/scripts/run_ui.sh
+# ↳ Boots the FastAPI server with auto-reload and opens the web dashboard at http://localhost:8000.
 ```
+
+Prefer to launch it manually? Run:
+
+```bash
 PYTHONPATH=construction_takeoff uvicorn takeoff.webapp.app:create_app --reload
+# ↳ Spins up the same server without the helper script; ideal for custom deployment commands.
 ```
 
 Navigate to [http://localhost:8000](http://localhost:8000) to access the UI. From there you can:
