@@ -13,43 +13,16 @@ The tool is intended as a starting point for a richer desktop or web product. It
 - Human-in-the-loop checkpoints to flag assumptions and require acknowledgement.
 - Spreadsheet (CSV) exporter that is compatible with Excel/Google Sheets.
 
-## Line-by-line Quick Start
+## Usage
 
-Follow the exact commands below to get the project running locally. Each line includes a short explanation so you know what it is doing.
-
-```bash
-git clone https://github.com/<your-org>/construction_takeoff.git
-# ↳ Downloads the project onto your machine. Skip if you already have the repo.
-
-cd construction_takeoff
-# ↳ Enters the project directory so the helper scripts can be found.
-
-bash construction_takeoff/scripts/bootstrap.sh
-# ↳ Creates a Python virtual environment and installs every CLI/UI dependency.
-
-source .venv/bin/activate
-# ↳ Activates the virtual environment that the bootstrap script just created.
-
-construction_takeoff/scripts/run_cli.sh \
-  --trade concrete \
-  --input construction_takeoff/docs \
-  --output /tmp/estimate.csv
-# ↳ Generates a sample estimate using the bundled demo drawings. Replace the flags with your own trade/input/output when ready.
 ```
-
-The CLI helper script wires up `PYTHONPATH` automatically. If you want to see the raw Python command, run:
-
-```bash
 PYTHONPATH=construction_takeoff python -m takeoff.cli --trade concrete --input /path/to/drawings --output estimate.csv
-# ↳ Executes the estimator directly; useful for integrating into other tooling.
 ```
-
-Once you have produced an estimate:
 
 1. Export your construction drawings into JSON using the provided schema (see `docs/sample_drawing.json`).
-2. Run the CLI with the trade you want to estimate (e.g., `--trade concrete`).
-3. Review the generated CSV alongside the human-review notes printed to the console.
-4. Adjust assumptions or pricing as needed and rerun the command.
+2. Run the CLI with the trade you want to estimate.
+3. Review the generated CSV alongside the human-review notes in the console.
+4. Adjust assumptions as needed and rerun.
 
 ## Web Experience
 
