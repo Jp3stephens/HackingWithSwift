@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import pathlib
 from dataclasses import dataclass
+from typing import List
 
-from .drawings import DrawingLoader, group_elements_by_trade
+from .drawings import DrawingElement, DrawingLoader, group_elements_by_trade
 from .estimators import TRADE_REGISTRY, BaseTradeEstimator
 from .estimators.base import TakeoffResult
 from .human_review import ReviewChecklist
+from .manual import collect_manual_measurements
 
 
 @dataclass
@@ -20,6 +22,7 @@ class TakeoffRun:
     trade: str
     drawing_count: int
     element_count: int
+    elements: List[DrawingElement]
 
 
 def run_trade_takeoff(
@@ -43,12 +46,14 @@ def run_trade_takeoff(
     estimator_cls: type[BaseTradeEstimator] = TRADE_REGISTRY[trade_key]
     estimator = estimator_cls(review=review)
 
-    elements = grouped.get(trade_key, [])
+    elements = list(grouped.get(trade_key, []))
     if not elements:
         review.add(
             f"No drawing elements found for trade '{trade}'. Upload a data set that includes {trade_key} items.",
             severity="warning",
         )
+
+    collect_manual_measurements(trade_key, elements, review)
 
     result = estimator.run(elements)
 
@@ -58,4 +63,5 @@ def run_trade_takeoff(
         trade=trade_key,
         drawing_count=len(drawings),
         element_count=len(elements),
+        elements=elements,
     )

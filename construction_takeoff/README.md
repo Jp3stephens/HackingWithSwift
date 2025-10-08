@@ -10,7 +10,7 @@ The tool is intended as a starting point for a richer desktop or web product. It
 - Drawing analyzer that aggregates geometry and metadata from PDF sheets or JSON exports.
 - Pluggable estimators for each trade (concrete example provided).
 - Labor and material costing with configuration-driven production rates.
-- Human-in-the-loop checkpoints to flag assumptions and require acknowledgement.
+- Human-in-the-loop checkpoints to flag assumptions, capture missing geometry, and require acknowledgement.
 - Spreadsheet (CSV) exporter that is compatible with Excel/Google Sheets.
 
 ## Line-by-line Quick Start
@@ -103,7 +103,9 @@ Add a new estimator in `takeoff/estimators/your_trade.py` inheriting from `BaseT
 
 ## Human-in-the-loop Design
 
-The CLI prints out a checklist of assumptions and allows the reviewer to accept or reject them. In a full product this would be replaced by a UI with markup back to the drawing set.
+The CLI now pauses when it finds elements without measurable geometry and walks the estimator through the missing inputs. Provide numeric values (area, thickness, volume, etc.) right in the terminal to keep the run going; press Enter to skip anything you want to revisit later. When prompted you can also capture a normalized bounding box (`x1`, `y1`, `x2`, `y2` between 0 and 1) so the software exports highlight metadata.
+
+After the estimator finishes, check the human-review summary plus the generated `<output>.markups.json` file. Each markup entry includes the drawing source and bounding box coordinates you supplied, ready for overlay in a PDF viewer or the bundled UI.
 
 ## Future Enhancements
 

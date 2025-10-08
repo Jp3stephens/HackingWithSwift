@@ -146,7 +146,7 @@ class DrawingLoader:
         elements: List[DrawingElement] = []
         for idx, match in enumerate(_MEASUREMENT_PATTERN.finditer(text), start=1):
             label = match.group("label").strip()
-            value = float(match.group("value"))
+            value = float(match.group("value").replace(",", ""))
             unit = match.group("unit").lower()
             geometry = _geometry_from_unit(unit, value)
             if not geometry:
@@ -251,7 +251,7 @@ def _extract_pdf_pages_fallback(payload: bytes) -> List[str]:
 
 
 _MEASUREMENT_PATTERN = re.compile(
-    r"(?P<label>[A-Za-z0-9#\-/\s]+)\s*(?:[:=]|-\s)\s*(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>sq\.?\s*ft|sf|square feet|cy|cubic yards|cu\.?\s*yd\.?|lf|linear feet|ft|feet|ea|each|hrs?|hours?)",
+    r"(?P<label>[A-Za-z0-9#\-/\s]+)\s*(?:[:=]|-\s)\s*(?P<value>\d+(?:,\d{3})*(?:\.\d+)?)\s*(?P<unit>sq\.?\s*ft|s\.?f\.?|sf|square feet|cy|cubic yards|cu\.?\s*yd\.?|lf|linear feet|ft|feet|ea|each|hrs?|hours?)",
     re.IGNORECASE,
 )
 

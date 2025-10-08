@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from .human_review import ReviewChecklist
 from .exporters.spreadsheet import SpreadsheetExporter
+from .markups import export_markups
 from .service import run_trade_takeoff
 
 
@@ -30,5 +31,9 @@ class TakeoffProject:
         exporter = SpreadsheetExporter(self.config.output_path)
         exporter.export(run.result)
 
+        markup_path = export_markups(run.elements, self.config.output_path)
+
         print(self.review.summarize())
         print(f"Estimate exported to {self.config.output_path}")
+        if markup_path:
+            print(f"Markup overlay exported to {markup_path}")
