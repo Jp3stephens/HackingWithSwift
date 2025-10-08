@@ -11,7 +11,11 @@ from .project import TakeoffConfig, TakeoffProject
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Automated construction takeoff assistant")
     parser.add_argument("--trade", required=True, help="Trade to estimate (e.g. concrete, roofing)")
-    parser.add_argument("--input", required=True, help="Path to directory or zip containing drawing JSON exports")
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to directory, PDF, or zip containing drawing exports",
+    )
     parser.add_argument("--output", required=True, help="Path to write the resulting CSV estimate")
     return parser
 

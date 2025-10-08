@@ -1,0 +1,53 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 239 >>
+stream
+BT
+/F1 24 Tf
+72 720 Td
+(Concrete Takeoff Summary) Tj
+/F1 16 Tf
+72 680 Td
+(Slab Area: 1200 SF) Tj
+72 650 Td
+(Footing Volume: 30 CY) Tj
+72 620 Td
+(Rebar Length - #4: 500 LF) Tj
+72 590 Td
+(Formwork Area: 1400 SF) Tj
+72 560 Td
+(Labor Hours: 160 hrs) Tj
+72 530 Td
+(Waterproofing Coverage: 950 SF) Tj
+72 500 Td
+(Masonry Wall Length: 220 LF) Tj
+72 470 Td
+(Steel Beam Count: 18 EA) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /Name /F1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000060 00000 n 
+0000000114 00000 n 
+0000000263 00000 n 
+0000000486 00000 n 
+trailer
+<< /Root 1 0 R /Size 6 >>
+startxref
+575
+%%EOF

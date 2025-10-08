@@ -66,7 +66,7 @@ function formatNumber(value, decimals = 2) {
 
 function resetDropzone() {
   dropZoneTitle.textContent = 'Drag & drop files here';
-  dropZoneSubtitle.textContent = 'JSON or ZIP exports up to 25MB.';
+  dropZoneSubtitle.textContent = 'PDF, JSON, or ZIP exports up to 25MB.';
 }
 
 function updateDropzone(file) {

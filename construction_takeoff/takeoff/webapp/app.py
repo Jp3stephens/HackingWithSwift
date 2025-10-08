@@ -41,11 +41,11 @@ def create_app() -> FastAPI:
     @app.post("/api/takeoff")
     async def perform_takeoff(trade: str = Form(...), drawing: UploadFile = File(...)) -> JSONResponse:
         if not drawing.filename:
-            raise HTTPException(status_code=400, detail="Please upload a JSON export or ZIP archive of drawings.")
+            raise HTTPException(status_code=400, detail="Please upload a PDF, JSON export, or ZIP archive of drawings.")
 
         suffix = pathlib.Path(drawing.filename).suffix.lower()
-        if suffix not in {".json", ".zip"}:
-            raise HTTPException(status_code=400, detail="Unsupported file type. Upload a .json or .zip export.")
+        if suffix not in {".json", ".zip", ".pdf"}:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Upload a .pdf, .json, or .zip export.")
 
         try:
             with TemporaryDirectory() as tmp:
@@ -112,7 +112,7 @@ async def _persist_upload(upload: UploadFile, temp_dir: pathlib.Path) -> pathlib
     filename = pathlib.Path(upload.filename or "drawings")
     suffix = filename.suffix.lower()
 
-    if suffix == ".json":
+    if suffix in {".json", ".pdf"}:
         target_dir = temp_dir / "input"
         target_dir.mkdir(parents=True, exist_ok=True)
         (target_dir / filename.name).write_bytes(payload)

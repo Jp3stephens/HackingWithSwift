@@ -132,6 +132,51 @@ class ConcreteEstimator(BaseTradeEstimator):
                 summary["concrete_cy"] += cy
                 summary["rebar_lb"] += rebar
 
+            elif element.category in {"footing", "foundation"}:
+                cy = element.geometry.get("volume_cy", 0.0)
+                if cy == 0:
+                    self.review.add(
+                        f"Footing {element.id} is missing volume data. Add a volume callout to include it in the estimate.",
+                        severity="warning",
+                    )
+                    continue
+
+                rebar = cy * 220
+                formwork = element.geometry.get("area_sqft", 0.0)
+                line_items.extend(
+                    [
+                        self._line_item(
+                            description=f"Concrete footing {element.id}",
+                            quantity=cy,
+                            unit="cy",
+                            material_price=self.material_prices["ready_mix_cy"],
+                            production_rate=self.production_rates["place_finish_cy_per_hour"],
+                        ),
+                        self._line_item(
+                            description=f"Rebar for footing {element.id}",
+                            quantity=rebar,
+                            unit="lb",
+                            material_price=self.material_prices["rebar_lb"],
+                            production_rate=self.production_rates["rebar_lb_per_hour"],
+                        ),
+                    ]
+                )
+
+                if formwork:
+                    line_items.append(
+                        self._line_item(
+                            description=f"Footing formwork {element.id}",
+                            quantity=formwork,
+                            unit="sf",
+                            material_price=self.material_prices["formwork_sf"],
+                            production_rate=self.production_rates["formwork_sf_per_hour"],
+                        )
+                    )
+
+                summary["concrete_cy"] += cy
+                summary["rebar_lb"] += rebar
+                summary["formwork_sf"] += formwork
+
             else:
                 self.review.add(
                     f"Concrete estimator encountered unsupported category '{element.category}' for element {element.id}.",

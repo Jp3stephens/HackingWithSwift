@@ -30,10 +30,10 @@ def run_trade_takeoff(
 ) -> TakeoffRun:
     """Execute a trade takeoff and return structured results."""
 
-    drawings = list(DrawingLoader(input_path).load())
+    trade_key = trade.lower()
+    drawings = list(DrawingLoader(input_path, default_trade=trade_key).load())
     grouped = group_elements_by_trade(drawings)
 
-    trade_key = trade.lower()
     if trade_key not in TRADE_REGISTRY:
         available = ", ".join(sorted(TRADE_REGISTRY))
         raise ValueError(f"Unsupported trade '{trade}'. Available trades: {available}")
