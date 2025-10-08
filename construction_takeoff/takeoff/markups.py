@@ -1,18 +1,35 @@
-"""Export markup overlays for reviewed drawing elements."""
+"""Export markup metadata and overlays for reviewed drawing elements."""
 
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 from .drawings import DrawingElement
+from .overlays import export_pdf_overlays
 
 
-def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> Optional[Path]:
-    """Persist markup bounding boxes alongside the generated estimate."""
+@dataclass
+class MarkupExport:
+    """Paths to exported markup artifacts."""
 
-    markups = []
+    metadata: Optional[Path]
+    overlays: List[Path]
+
+
+def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> MarkupExport:
+    """Persist markup metadata and overlay PDFs alongside the generated estimate."""
+
+    metadata_path = _export_metadata(elements, output_path)
+    overlay_paths = export_pdf_overlays(elements, output_path.parent)
+    return MarkupExport(metadata=metadata_path, overlays=overlay_paths)
+
+
+def collect_markup_metadata(elements: Iterable[DrawingElement]) -> List[dict]:
+    entries: List[dict] = []
+
     for element in elements:
         bbox_raw = element.metadata.get("markup_bbox")
         if not bbox_raw:
@@ -23,7 +40,7 @@ def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> Opt
             continue
         if len(coords) != 4:
             continue
-        markups.append(
+        entries.append(
             {
                 "element_id": element.id,
                 "trade": element.trade,
@@ -32,6 +49,12 @@ def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> Opt
                 "bounding_box": coords,
             }
         )
+
+    return entries
+
+
+def _export_metadata(elements: Iterable[DrawingElement], output_path: Path) -> Optional[Path]:
+    markups = collect_markup_metadata(elements)
 
     if not markups:
         return None

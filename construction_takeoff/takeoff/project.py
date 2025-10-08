@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from .human_review import ReviewChecklist
 from .exporters.spreadsheet import SpreadsheetExporter
 from .markups import export_markups
+from .overlays import SUPPORTS_PDF_OVERLAYS
 from .service import run_trade_takeoff
 
 
@@ -31,9 +32,13 @@ class TakeoffProject:
         exporter = SpreadsheetExporter(self.config.output_path)
         exporter.export(run.result)
 
-        markup_path = export_markups(run.elements, self.config.output_path)
+        markup_export = export_markups(run.elements, self.config.output_path)
 
         print(self.review.summarize())
         print(f"Estimate exported to {self.config.output_path}")
-        if markup_path:
-            print(f"Markup overlay exported to {markup_path}")
+        if markup_export.metadata:
+            print(f"Markup metadata exported to {markup_export.metadata}")
+            if not markup_export.overlays and not SUPPORTS_PDF_OVERLAYS:
+                print("Install the optional 'pypdf' dependency to generate annotated PDF overlays.")
+        for overlay_path in markup_export.overlays:
+            print(f"Markup overlay exported to {overlay_path}")

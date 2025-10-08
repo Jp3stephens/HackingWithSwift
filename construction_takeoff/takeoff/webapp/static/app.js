@@ -22,6 +22,11 @@ const heroMaterial = document.getElementById('hero-material-cost');
 const heroLabor = document.getElementById('hero-labor-cost');
 const heroTotal = document.getElementById('hero-total-cost');
 const heroReview = document.getElementById('hero-review-summary');
+const markupSection = document.getElementById('markup-section');
+const markupGallery = document.getElementById('markup-gallery');
+const markupMetadataList = document.getElementById('markup-metadata');
+const markupEmpty = document.getElementById('markup-empty');
+const markupEmptyDefault = markupEmpty ? markupEmpty.textContent : '';
 
 let downloadUrl = null;
 
@@ -197,10 +202,98 @@ function renderResults(data) {
 
   renderLineItems(data.line_items);
   renderReview(data.review);
+  renderMarkups(data.markups || {});
 
   enableDownload(data.csv, data.trade_label);
 
   resultsSection.classList.remove('hidden');
+}
+
+function renderMarkups(markups) {
+  if (!markupSection) {
+    return;
+  }
+
+  const supported = markups.supported !== false;
+  const overlays = markups.overlays || [];
+  const metadata = markups.metadata || [];
+
+  markupGallery.innerHTML = '';
+  markupMetadataList.innerHTML = '';
+
+  if (!supported) {
+    markupSection.classList.remove('hidden');
+    if (markupEmpty) {
+      markupEmpty.textContent = 'Install the optional "pypdf" dependency to generate PDF markup overlays during takeoff runs.';
+      markupEmpty.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (!overlays.length && !metadata.length) {
+    markupSection.classList.remove('hidden');
+    if (markupEmpty) {
+      markupEmpty.textContent = markupEmptyDefault;
+      markupEmpty.classList.remove('hidden');
+    }
+    return;
+  }
+
+  markupSection.classList.remove('hidden');
+  if (markupEmpty) {
+    markupEmpty.textContent = markupEmptyDefault;
+    markupEmpty.classList.add('hidden');
+  }
+
+  overlays.forEach((overlay) => {
+    const card = document.createElement('div');
+    card.className = 'space-y-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-inner shadow-black/40';
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between gap-3';
+
+    const title = document.createElement('h4');
+    title.className = 'text-sm font-semibold text-slate-100 truncate';
+    title.title = overlay.source || overlay.filename;
+    title.textContent = overlay.filename;
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = overlay.data_url;
+    downloadLink.download = overlay.filename;
+    downloadLink.className = 'inline-flex items-center gap-1 rounded-full border border-slate-600/60 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:border-sky-400/80 hover:text-white';
+    downloadLink.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 10.5L12 15m0 0l4.5-4.5M12 15V3" /></svg>PDF';
+
+    header.appendChild(title);
+    header.appendChild(downloadLink);
+
+    const frame = document.createElement('iframe');
+    frame.src = overlay.data_url;
+    frame.title = `Markup overlay ${overlay.filename}`;
+    frame.className = 'h-64 w-full rounded-xl border border-white/10 bg-white/5';
+
+    card.appendChild(header);
+    card.appendChild(frame);
+
+    markupGallery.appendChild(card);
+  });
+
+  metadata.forEach((entry) => {
+    const item = document.createElement('li');
+    item.className = 'rounded-xl border border-slate-600/60 bg-slate-900/60 p-3 text-xs text-slate-200 shadow-inner shadow-black/30';
+
+    const source = entry.source ? entry.source.split('#')[0] : 'uploaded drawing';
+    const bbox = entry.bounding_box
+      ? entry.bounding_box.map((value) => Number(value).toFixed(2)).join(', ')
+      : '—';
+
+    item.innerHTML = `
+      <div class="font-semibold text-slate-100">${entry.element_id} · ${entry.category}</div>
+      <div class="mt-1 text-slate-300">${source}</div>
+      <div class="mt-1 text-slate-400">Bounds: [${bbox}]</div>
+    `;
+
+    markupMetadataList.appendChild(item);
+  });
 }
 
 function validateForm() {

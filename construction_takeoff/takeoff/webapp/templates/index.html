@@ -301,6 +301,33 @@
                     </div>
                   </section>
                 </div>
+
+                <section id="markup-section" class="hidden rounded-3xl border border-white/5 bg-slate-900/60 p-6">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 class="text-xl font-semibold text-white">Drawing markups</h3>
+                      <p class="text-sm text-slate-300">Visual overlays highlight every captured bounding box directly on the uploaded sheets.</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-600/60 px-3 py-1 text-xs text-slate-300">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25l3 3m-1.5-4.5a2.25 2.25 0 113.182 3.182L6.75 20.25H3v-3.75L17.25 3z" />
+                      </svg>
+                      Bounding box overlays
+                    </span>
+                  </div>
+
+                  <p id="markup-empty" class="mt-6 rounded-2xl border border-slate-600/60 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
+                    No markup highlights were captured for this takeoff yet. Use the manual measurement flow to add bounding boxes during review.
+                  </p>
+
+                  <div class="mt-6 grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+                    <div id="markup-gallery" class="grid gap-6 sm:grid-cols-2"></div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-slate-200">Captured elements</h4>
+                      <ul id="markup-metadata" class="mt-3 space-y-3"></ul>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>

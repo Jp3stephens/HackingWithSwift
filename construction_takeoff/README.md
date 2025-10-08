@@ -12,6 +12,8 @@ The tool is intended as a starting point for a richer desktop or web product. It
 - Labor and material costing with configuration-driven production rates.
 - Human-in-the-loop checkpoints to flag assumptions, capture missing geometry, and require acknowledgement.
 - Spreadsheet (CSV) exporter that is compatible with Excel/Google Sheets.
+- Optional PDF overlay exporter that highlights every captured bounding box directly on the source drawings.
+  - Install the lightweight [`pypdf`](https://pypi.org/project/pypdf/) dependency to enable annotated PDF output (the system falls back to metadata-only exports when it is unavailable).
 
 ## Line-by-line Quick Start
 
@@ -49,7 +51,8 @@ Once you have produced an estimate:
 1. Gather the PDF sheets from your construction drawing package (multi-sheet ZIPs work as well) or export your CAD/BIM model into JSON using the provided schema (see `docs/sample_drawing.json`).
 2. Run the CLI with the trade you want to estimate (e.g., `--trade concrete`).
 3. Review the generated CSV alongside the human-review notes printed to the console.
-4. Adjust assumptions or pricing as needed and rerun the command.
+4. Open the `<output>.markups.json` metadata file or the annotated PDF overlays (saved next to your CSV) to inspect highlighted drawing regions.
+5. Adjust assumptions or pricing as needed and rerun the command.
 
 > **PDF ingestion primer:** the loader scans each sheet for measurement callouts such as `Slab Area: 1200 SF` or `Footing Volume - 30 CY`. Matched values are mapped into trade elements automatically and can be refined during human review. If a sheet does not contain a recognizable table, the system inserts a placeholder item so you know a manual markup is required. Install `pdfminer.six` (already listed in `requirements.txt`) for the most accurate text extraction; without it, a lightweight fallback parser reads simple text blocks.
 
@@ -80,6 +83,7 @@ Navigate to [http://localhost:8000](http://localhost:8000) to access the UI. Fro
 - Review an instant dashboard showing material, labor, total costs, and labor hours.
 - Inspect human-in-the-loop checkpoints before publishing an estimate.
 - Download the spreadsheet-ready CSV directly from the browser.
+- Preview markup overlays in the browser without leaving the workspace, and download annotated PDFs that mirror the highlighted bounding boxes.
 
 ## Project Layout
 
@@ -105,7 +109,7 @@ Add a new estimator in `takeoff/estimators/your_trade.py` inheriting from `BaseT
 
 The CLI now pauses when it finds elements without measurable geometry and walks the estimator through the missing inputs. Provide numeric values (area, thickness, volume, etc.) right in the terminal to keep the run going; press Enter to skip anything you want to revisit later. When prompted you can also capture a normalized bounding box (`x1`, `y1`, `x2`, `y2` between 0 and 1) so the software exports highlight metadata.
 
-After the estimator finishes, check the human-review summary plus the generated `<output>.markups.json` file. Each markup entry includes the drawing source and bounding box coordinates you supplied, ready for overlay in a PDF viewer or the bundled UI.
+After the estimator finishes, check the human-review summary plus the generated `<output>.markups.json` file. Each markup entry includes the drawing source and bounding box coordinates you supplied. The CLI automatically writes annotated PDFs alongside the CSV, while the web UI streams inline previews so you can verify the highlighted geometry without leaving the browser.
 
 ## Future Enhancements
 
