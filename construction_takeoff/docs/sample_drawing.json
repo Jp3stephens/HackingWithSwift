@@ -1,0 +1,37 @@
+{
+  "project": {
+    "name": "Example Office Tower",
+    "level": "P1",
+    "scale": "1/8\" = 1'-0"
+  },
+  "elements": [
+    {
+      "id": "slab-01",
+      "trade": "concrete",
+      "category": "slab",
+      "geometry": {
+        "area_sqft": 1200.0,
+        "thickness_in": 6
+      }
+    },
+    {
+      "id": "wall-01",
+      "trade": "concrete",
+      "category": "wall",
+      "geometry": {
+        "length_ft": 40,
+        "height_ft": 12,
+        "thickness_in": 8
+      }
+    },
+    {
+      "id": "pier-01",
+      "trade": "concrete",
+      "category": "pier",
+      "geometry": {
+        "diameter_in": 18,
+        "depth_ft": 25
+      }
+    }
+  ]
+}
