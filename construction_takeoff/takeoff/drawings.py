@@ -185,6 +185,7 @@ class DrawingLoader:
                     metadata={
                         "source": source,
                         "note": "No measurable callouts detected. Review required.",
+                        "placeholder": "true",
                     },
                 )
             )

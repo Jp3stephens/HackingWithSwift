@@ -45,6 +45,7 @@ class ConcreteEstimator(BaseTradeEstimator):
             if not element.geometry:
                 source = element.metadata.get("source", "uploaded drawings")
                 note = element.metadata.get("note")
+                placeholder = element.metadata.get("placeholder") in {"true", True}
                 message = (
                     f"Concrete element {element.id} is missing measurable geometry from {source}."
                 )
@@ -55,7 +56,8 @@ class ConcreteEstimator(BaseTradeEstimator):
                         f"{message} Provide manual quantities or update the plan callouts so the "
                         "automated takeoff can include it."
                     )
-                self.review.add(message, severity="warning")
+                severity = "info" if placeholder else "warning"
+                self.review.add(message, severity=severity)
                 continue
 
             if element.category == "slab":
