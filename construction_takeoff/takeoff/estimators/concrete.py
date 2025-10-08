@@ -42,6 +42,22 @@ class ConcreteEstimator(BaseTradeEstimator):
         }
 
         for element in elements:
+            if not element.geometry:
+                source = element.metadata.get("source", "uploaded drawings")
+                note = element.metadata.get("note")
+                message = (
+                    f"Concrete element {element.id} is missing measurable geometry from {source}."
+                )
+                if note:
+                    message = f"{message} {note}"
+                else:
+                    message = (
+                        f"{message} Provide manual quantities or update the plan callouts so the "
+                        "automated takeoff can include it."
+                    )
+                self.review.add(message, severity="warning")
+                continue
+
             if element.category == "slab":
                 cy = self._slab_volume_cy(element)
                 formwork = element.geometry.get("area_sqft", 0.0)
