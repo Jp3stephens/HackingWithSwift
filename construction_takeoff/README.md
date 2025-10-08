@@ -13,7 +13,7 @@ The tool is intended as a starting point for a richer desktop or web product. It
 - Human-in-the-loop checkpoints to flag assumptions, capture missing geometry, and require acknowledgement.
 - Spreadsheet (CSV) exporter that is compatible with Excel/Google Sheets.
 - Optional PDF overlay exporter that highlights every captured bounding box directly on the source drawings.
-  - Install the lightweight [`pypdf`](https://pypi.org/project/pypdf/) dependency to enable annotated PDF output (the system falls back to metadata-only exports when it is unavailable).
+  - The toolkit automatically installs the lightweight [`pypdf`](https://pypi.org/project/pypdf/) dependency the first time overlays are requested. If the install cannot complete (for example, on air-gapped machines) the run continues with metadata-only exports and reports the exact error so you can address it manually.
 
 ## Line-by-line Quick Start
 

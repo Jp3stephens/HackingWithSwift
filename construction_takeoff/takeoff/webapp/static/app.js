@@ -217,6 +217,7 @@ function renderMarkups(markups) {
   const supported = markups.supported !== false;
   const overlays = markups.overlays || [];
   const metadata = markups.metadata || [];
+  const message = markups.message || '';
 
   markupGallery.innerHTML = '';
   markupMetadataList.innerHTML = '';
@@ -224,7 +225,7 @@ function renderMarkups(markups) {
   if (!supported) {
     markupSection.classList.remove('hidden');
     if (markupEmpty) {
-      markupEmpty.textContent = 'Install the optional "pypdf" dependency to generate PDF markup overlays during takeoff runs.';
+      markupEmpty.textContent = message || 'Install the optional "pypdf" dependency to generate PDF markup overlays during takeoff runs.';
       markupEmpty.classList.remove('hidden');
     }
     return;
@@ -233,7 +234,7 @@ function renderMarkups(markups) {
   if (!overlays.length && !metadata.length) {
     markupSection.classList.remove('hidden');
     if (markupEmpty) {
-      markupEmpty.textContent = markupEmptyDefault;
+      markupEmpty.textContent = message || markupEmptyDefault;
       markupEmpty.classList.remove('hidden');
     }
     return;

@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from ..estimators import TRADE_REGISTRY
 from ..exporters.spreadsheet import render_csv
 from ..markups import collect_markup_metadata
-from ..overlays import SUPPORTS_PDF_OVERLAYS, build_pdf_overlays
+from ..overlays import build_pdf_overlays, get_overlay_support_state
 from ..service import run_trade_takeoff
 
 
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
         csv_payload = render_csv(run.result)
         markup_metadata = collect_markup_metadata(run.elements)
         overlays = build_pdf_overlays(run.elements)
+        overlay_support = get_overlay_support_state()
 
         material_cost = run.result.summary.get("material_cost", 0.0)
         labor_cost = run.result.summary.get("labor_cost", 0.0)
@@ -100,7 +101,8 @@ def create_app() -> FastAPI:
             "review_summary": run.review.summarize(),
             "csv": csv_payload,
             "markups": {
-                "supported": SUPPORTS_PDF_OVERLAYS,
+                "supported": overlay_support.available,
+                "message": overlay_support.message,
                 "metadata": markup_metadata,
                 "overlays": [
                     {

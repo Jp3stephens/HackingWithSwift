@@ -3,34 +3,164 @@
 from __future__ import annotations
 
 import base64
+import importlib
 import io
+import logging
+import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
-try:  # pragma: no cover - optional dependency for rendering overlays
-    from pypdf import PdfReader, PdfWriter  # type: ignore
-    from pypdf.generic import (  # type: ignore
+from .drawings import DrawingElement
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class OverlaySupportState:
+    """Represents the current overlay capability state."""
+
+    available: bool
+    auto_install_attempted: bool = False
+    auto_install_error: Optional[str] = None
+
+    @property
+    def message(self) -> Optional[str]:
+        """Return a human-friendly status message when overlays are unavailable."""
+
+        if self.available:
+            return None
+
+        if self.auto_install_attempted and self.auto_install_error:
+            return (
+                "Automatic installation of the 'pypdf' dependency failed. "
+                f"Install 'pypdf>=3.9' manually and retry. ({self.auto_install_error})"
+            )
+
+        return (
+            "Install the optional 'pypdf' dependency to generate PDF markup "
+            "overlays during takeoff runs."
+        )
+
+
+def _load_pypdf():  # pragma: no cover - exercised via integration flow
+    """Attempt to import ``pypdf`` and return the relevant classes."""
+
+    try:
+        module = importlib.import_module("pypdf")
+    except ImportError:
+        return None
+
+    try:
+        reader = module.PdfReader
+        writer = module.PdfWriter
+        generic = module.generic
+    except AttributeError:
+        return None
+
+    return (
+        reader,
+        writer,
+        generic.ArrayObject,
+        generic.DictionaryObject,
+        generic.FloatObject,
+        generic.NameObject,
+        generic.NumberObject,
+        generic.TextStringObject,
+    )
+
+
+def _set_pdf_api(api) -> None:
+    """Assign the pypdf classes to module globals."""
+
+    global PdfReader, PdfWriter, ArrayObject, DictionaryObject, FloatObject
+    global NameObject, NumberObject, TextStringObject, SUPPORTS_PDF_OVERLAYS
+
+    (
+        PdfReader,
+        PdfWriter,
         ArrayObject,
         DictionaryObject,
         FloatObject,
         NameObject,
         NumberObject,
         TextStringObject,
-    )
-except ImportError:  # pragma: no cover - allow environments without pypdf
-    PdfReader = None  # type: ignore
-    PdfWriter = None  # type: ignore
-    ArrayObject = None  # type: ignore
-    DictionaryObject = None  # type: ignore
-    FloatObject = None  # type: ignore
-    NameObject = None  # type: ignore
-    NumberObject = None  # type: ignore
-    TextStringObject = None  # type: ignore
+    ) = api
 
-SUPPORTS_PDF_OVERLAYS = PdfReader is not None and PdfWriter is not None
+    _overlay_support_state.available = True
+    _overlay_support_state.auto_install_error = None
+    SUPPORTS_PDF_OVERLAYS = True
 
-from .drawings import DrawingElement
+
+def _install_pypdf() -> bool:  # pragma: no cover - depends on environment
+    """Attempt to install ``pypdf`` using ``pip`` at runtime."""
+
+    if _overlay_support_state.auto_install_attempted:
+        return False
+
+    _overlay_support_state.auto_install_attempted = True
+
+    command = [sys.executable or "python", "-m", "pip", "install", "pypdf>=3.9"]
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except Exception as exc:  # pragma: no cover - defensive path
+        _overlay_support_state.auto_install_error = str(exc)
+        logger.debug("Automatic pypdf installation failed", exc_info=True)
+        return False
+
+    logger.info("Installed 'pypdf' to enable markup overlay exports: %s", result.stdout.strip())
+    _overlay_support_state.auto_install_error = None
+    return True
+
+
+def _ensure_overlay_support() -> bool:
+    """Ensure pypdf is available, attempting a runtime install if required."""
+
+    global SUPPORTS_PDF_OVERLAYS
+
+    if SUPPORTS_PDF_OVERLAYS:
+        return True
+
+    api = _load_pypdf()
+    if api is not None:
+        _set_pdf_api(api)
+        return True
+
+    if _install_pypdf():
+        api = _load_pypdf()
+        if api is not None:
+            _set_pdf_api(api)
+            return True
+        if _overlay_support_state.auto_install_error is None:
+            _overlay_support_state.auto_install_error = "pypdf installation succeeded but the module could not be imported."
+
+    SUPPORTS_PDF_OVERLAYS = False
+    return False
+
+
+PdfReader = None  # type: ignore[assignment]
+PdfWriter = None  # type: ignore[assignment]
+ArrayObject = None  # type: ignore[assignment]
+DictionaryObject = None  # type: ignore[assignment]
+FloatObject = None  # type: ignore[assignment]
+NameObject = None  # type: ignore[assignment]
+NumberObject = None  # type: ignore[assignment]
+TextStringObject = None  # type: ignore[assignment]
+
+_overlay_support_state = OverlaySupportState(available=False)
+
+initial_api = _load_pypdf()
+if initial_api is not None:
+    _set_pdf_api(initial_api)
+
+SUPPORTS_PDF_OVERLAYS = _overlay_support_state.available
 
 
 @dataclass
@@ -51,11 +181,14 @@ class MarkupOverlay:
 def build_pdf_overlays(elements: Iterable[DrawingElement]) -> List[MarkupOverlay]:
     """Create annotated PDF overlays for elements that include markup bounding boxes."""
 
-    if not SUPPORTS_PDF_OVERLAYS:
-        return []
-
     grouped = _group_elements(elements)
     overlays: List[MarkupOverlay] = []
+
+    if not grouped:
+        return overlays
+
+    if not _ensure_overlay_support():
+        return overlays
 
     for source_path, pages in grouped.items():
         if not source_path.exists():
@@ -86,12 +219,13 @@ def build_pdf_overlays(elements: Iterable[DrawingElement]) -> List[MarkupOverlay
 def export_pdf_overlays(elements: Iterable[DrawingElement], directory: Path) -> List[Path]:
     """Persist overlay PDFs to ``directory`` and return the generated paths."""
 
-    if not SUPPORTS_PDF_OVERLAYS:
+    overlays = build_pdf_overlays(elements)
+    if not overlays:
         return []
 
     directory.mkdir(parents=True, exist_ok=True)
     paths: List[Path] = []
-    for overlay in build_pdf_overlays(elements):
+    for overlay in overlays:
         target = directory / overlay.filename
         target.write_bytes(overlay.payload)
         paths.append(target)
@@ -231,4 +365,14 @@ def _attach_annotation(page, annotation: DictionaryObject) -> None:
         annots = ArrayObject()
         page[NameObject("/Annots")] = annots
     annots.append(annotation)
+
+
+def get_overlay_support_state() -> OverlaySupportState:
+    """Return a snapshot of the current overlay capability state."""
+
+    return OverlaySupportState(
+        available=_overlay_support_state.available,
+        auto_install_attempted=_overlay_support_state.auto_install_attempted,
+        auto_install_error=_overlay_support_state.auto_install_error,
+    )
 
