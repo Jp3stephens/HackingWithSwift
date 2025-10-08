@@ -26,7 +26,13 @@ const markupSection = document.getElementById('markup-section');
 const markupGallery = document.getElementById('markup-gallery');
 const markupMetadataList = document.getElementById('markup-metadata');
 const markupEmpty = document.getElementById('markup-empty');
+const markupPreviewContainer = document.getElementById('markup-preview-container');
+const markupInfo = document.getElementById('markup-info');
 const markupEmptyDefault = markupEmpty ? markupEmpty.textContent : '';
+
+const PDF_JS_SRC = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.9.179/build/pdf.min.js';
+const PDF_JS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.9.179/build/pdf.worker.min.js';
+let pdfjsLoader = null;
 
 let downloadUrl = null;
 
@@ -185,7 +191,7 @@ function renderReview(items) {
   });
 }
 
-function renderResults(data) {
+async function renderResults(data) {
   summaryMaterial.textContent = formatCurrency(data.metrics.material_cost);
   summaryLabor.textContent = formatCurrency(data.metrics.labor_cost);
   summaryTotal.textContent = formatCurrency(data.metrics.total_cost);
@@ -202,48 +208,260 @@ function renderResults(data) {
 
   renderLineItems(data.line_items);
   renderReview(data.review);
-  renderMarkups(data.markups || {});
+  await renderMarkups(data.markups || {});
 
   enableDownload(data.csv, data.trade_label);
 
   resultsSection.classList.remove('hidden');
 }
 
-function renderMarkups(markups) {
+function renderMarkupMetadataList(metadata) {
+  if (!metadata.length) {
+    return;
+  }
+
+  metadata.forEach((entry) => {
+    const item = document.createElement('li');
+    item.className = 'rounded-xl border border-slate-600/60 bg-slate-900/60 p-3 text-xs text-slate-200 shadow-inner shadow-black/30';
+
+    const source = entry.source ? entry.source.split('#')[0] : 'uploaded drawing';
+    const bbox = Array.isArray(entry.bounding_box)
+      ? entry.bounding_box.map((value) => Number(value).toFixed(2)).join(', ')
+      : '—';
+
+    item.innerHTML = `
+      <div class="font-semibold text-slate-100">${entry.element_id} · ${entry.category}</div>
+      <div class="mt-1 text-slate-300">${source}</div>
+      <div class="mt-1 text-slate-400">Bounds: [${bbox}]</div>
+    `;
+
+    markupMetadataList.appendChild(item);
+  });
+}
+
+function decodeDataUrl(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') {
+    return new Uint8Array();
+  }
+
+  const parts = dataUrl.split(',');
+  const base64 = parts.length > 1 ? parts[1] : parts[0];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function ensurePdfJs() {
+  if (pdfjsLoader) {
+    return pdfjsLoader;
+  }
+
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_JS_WORKER;
+    pdfjsLoader = Promise.resolve(window.pdfjsLib);
+    return pdfjsLoader;
+  }
+
+  pdfjsLoader = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = PDF_JS_SRC;
+    script.async = true;
+    script.onload = () => {
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_JS_WORKER;
+        resolve(window.pdfjsLib);
+      } else {
+        pdfjsLoader = null;
+        reject(new Error('PDF.js failed to load.'));
+      }
+    };
+    script.onerror = () => {
+      pdfjsLoader = null;
+      reject(new Error('PDF.js failed to load.'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return pdfjsLoader;
+}
+
+function createHighlightDiv(entry, overlay, width, height) {
+  if (!entry || !overlay) {
+    return;
+  }
+
+  const coords = Array.isArray(entry.bounding_box)
+    ? entry.bounding_box.map((value) => Number(value))
+    : [];
+
+  if (coords.length !== 4 || coords.some((value) => Number.isNaN(value))) {
+    return;
+  }
+
+  const [x1, y1, x2, y2] = coords;
+  const left = Math.min(x1, x2) * width;
+  const top = Math.min(y1, y2) * height;
+  const rectWidth = Math.abs(x2 - x1) * width;
+  const rectHeight = Math.abs(y2 - y1) * height;
+
+  if (!rectWidth || !rectHeight) {
+    return;
+  }
+
+  const highlight = document.createElement('div');
+  highlight.style.position = 'absolute';
+  highlight.style.pointerEvents = 'none';
+  highlight.style.left = `${left}px`;
+  highlight.style.top = `${top}px`;
+  highlight.style.width = `${rectWidth}px`;
+  highlight.style.height = `${rectHeight}px`;
+  highlight.style.border = '2px solid rgba(56,189,248,0.85)';
+  highlight.style.background = 'rgba(56,189,248,0.22)';
+  highlight.style.borderRadius = '12px';
+  highlight.style.boxShadow = '0 18px 32px rgba(56,189,248,0.28)';
+  highlight.title = `${entry.element_id || 'element'} · ${entry.category || ''}`;
+  overlay.appendChild(highlight);
+}
+
+async function renderMarkupPreview(preview, pdfjsLib) {
+  if (!markupPreviewContainer) {
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-inner shadow-black/40';
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between gap-3';
+
+  const title = document.createElement('h4');
+  title.className = 'text-sm font-semibold text-slate-100 truncate';
+  title.textContent = preview.filename || (preview.source ? preview.source.split('/').pop() : 'Drawing preview');
+  title.title = preview.source || preview.filename || 'Drawing preview';
+  header.appendChild(title);
+
+  const pageCount = Array.isArray(preview.pages) ? preview.pages.length : 0;
+  const badge = document.createElement('span');
+  badge.className = 'rounded-full border border-slate-600/60 px-3 py-1 text-xs text-slate-300';
+  badge.textContent = `${pageCount} page${pageCount === 1 ? '' : 's'}`;
+  header.appendChild(badge);
+
+  card.appendChild(header);
+
+  const status = document.createElement('p');
+  status.className = 'text-xs text-slate-400';
+  status.textContent = 'Rendering preview…';
+  card.appendChild(status);
+
+  const pagesContainer = document.createElement('div');
+  pagesContainer.className = 'space-y-4';
+  card.appendChild(pagesContainer);
+
+  markupPreviewContainer.appendChild(card);
+
+  try {
+    const pdfBytes = decodeDataUrl(preview.data_url);
+    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+
+    if (!pageCount) {
+      status.textContent = 'No markup highlights were captured for this drawing.';
+      return;
+    }
+
+    status.classList.add('hidden');
+    status.textContent = '';
+
+    for (const pageInfo of preview.pages) {
+      const pageSection = document.createElement('div');
+      pageSection.className = 'space-y-2';
+
+      const pageTitle = document.createElement('div');
+      pageTitle.className = 'text-xs font-semibold uppercase tracking-wide text-slate-300';
+      pageTitle.textContent = `Page ${pageInfo.page_number}`;
+      pageSection.appendChild(pageTitle);
+
+      const canvasWrapper = document.createElement('div');
+      canvasWrapper.className = 'relative overflow-hidden rounded-xl border border-white/10 bg-slate-950/40 shadow-inner shadow-black/30';
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'w-full';
+      const overlay = document.createElement('div');
+      overlay.className = 'absolute inset-0';
+      overlay.style.pointerEvents = 'none';
+
+      canvasWrapper.appendChild(canvas);
+      canvasWrapper.appendChild(overlay);
+      pageSection.appendChild(canvasWrapper);
+      pagesContainer.appendChild(pageSection);
+
+      const page = await pdf.getPage(pageInfo.page_number);
+      const viewport = page.getViewport({ scale: 1.3 });
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = '100%';
+      canvas.style.height = 'auto';
+
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      const { width, height } = canvas;
+      (pageInfo.elements || []).forEach((entry) => createHighlightDiv(entry, overlay, width, height));
+    }
+  } catch (error) {
+    status.classList.remove('hidden');
+    status.className = 'text-xs text-rose-200';
+    status.textContent = `Failed to render preview: ${error.message || error}`;
+  }
+}
+
+async function renderMarkups(markups) {
   if (!markupSection) {
     return;
   }
 
-  const supported = markups.supported !== false;
-  const overlays = markups.overlays || [];
-  const metadata = markups.metadata || [];
+  const overlays = Array.isArray(markups.overlays) ? markups.overlays : [];
+  const previews = Array.isArray(markups.previews) ? markups.previews : [];
+  const metadata = Array.isArray(markups.metadata) ? markups.metadata : [];
   const message = markups.message || '';
+  const supported = markups.supported !== false && (overlays.length > 0 || previews.length > 0);
 
   markupGallery.innerHTML = '';
+  if (markupPreviewContainer) {
+    markupPreviewContainer.innerHTML = '';
+  }
   markupMetadataList.innerHTML = '';
 
-  if (!supported) {
-    markupSection.classList.remove('hidden');
-    if (markupEmpty) {
-      markupEmpty.textContent = message || 'Install the optional "pypdf" dependency to generate PDF markup overlays during takeoff runs.';
-      markupEmpty.classList.remove('hidden');
-    }
-    return;
+  if (markupInfo) {
+    markupInfo.textContent = '';
+    markupInfo.classList.add('hidden');
   }
 
-  if (!overlays.length && !metadata.length) {
-    markupSection.classList.remove('hidden');
+  if (markupEmpty) {
+    markupEmpty.textContent = markupEmptyDefault;
+    markupEmpty.classList.add('hidden');
+  }
+
+  markupSection.classList.remove('hidden');
+
+  if (!supported) {
     if (markupEmpty) {
       markupEmpty.textContent = message || markupEmptyDefault;
       markupEmpty.classList.remove('hidden');
     }
+    if (markupInfo && message) {
+      markupInfo.textContent = message;
+      markupInfo.classList.remove('hidden');
+    }
+    renderMarkupMetadataList(metadata);
     return;
   }
 
-  markupSection.classList.remove('hidden');
-  if (markupEmpty) {
-    markupEmpty.textContent = markupEmptyDefault;
-    markupEmpty.classList.add('hidden');
+  if (markupInfo && message) {
+    markupInfo.textContent = message;
+    markupInfo.classList.remove('hidden');
   }
 
   overlays.forEach((overlay) => {
@@ -278,23 +496,21 @@ function renderMarkups(markups) {
     markupGallery.appendChild(card);
   });
 
-  metadata.forEach((entry) => {
-    const item = document.createElement('li');
-    item.className = 'rounded-xl border border-slate-600/60 bg-slate-900/60 p-3 text-xs text-slate-200 shadow-inner shadow-black/30';
+  if (previews.length && markupPreviewContainer) {
+    try {
+      const pdfjsLib = await ensurePdfJs();
+      for (const preview of previews) {
+        await renderMarkupPreview(preview, pdfjsLib);
+      }
+    } catch (error) {
+      const warning = document.createElement('p');
+      warning.className = 'rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100';
+      warning.textContent = error.message || 'Unable to load interactive preview.';
+      markupPreviewContainer.appendChild(warning);
+    }
+  }
 
-    const source = entry.source ? entry.source.split('#')[0] : 'uploaded drawing';
-    const bbox = entry.bounding_box
-      ? entry.bounding_box.map((value) => Number(value).toFixed(2)).join(', ')
-      : '—';
-
-    item.innerHTML = `
-      <div class="font-semibold text-slate-100">${entry.element_id} · ${entry.category}</div>
-      <div class="mt-1 text-slate-300">${source}</div>
-      <div class="mt-1 text-slate-400">Bounds: [${bbox}]</div>
-    `;
-
-    markupMetadataList.appendChild(item);
-  });
+  renderMarkupMetadataList(metadata);
 }
 
 function validateForm() {
@@ -340,7 +556,7 @@ form.addEventListener('submit', async (event) => {
     }
 
     const data = await response.json();
-    renderResults(data);
+    await renderResults(data);
     setError('');
   } catch (error) {
     setError(error.message || 'Unexpected error.');

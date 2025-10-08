@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from ..estimators import TRADE_REGISTRY
 from ..exporters.spreadsheet import render_csv
 from ..markups import collect_markup_metadata
-from ..overlays import build_pdf_overlays, get_overlay_support_state
+from ..overlays import build_markup_previews, build_pdf_overlays, get_overlay_support_state
 from ..service import run_trade_takeoff
 
 
@@ -62,7 +62,19 @@ def create_app() -> FastAPI:
         csv_payload = render_csv(run.result)
         markup_metadata = collect_markup_metadata(run.elements)
         overlays = build_pdf_overlays(run.elements)
+        previews = build_markup_previews(run.elements)
         overlay_support = get_overlay_support_state()
+        markups_supported = bool(overlays) or bool(previews)
+
+        if overlays:
+            markup_message = overlay_support.message if not overlay_support.available else None
+        elif previews:
+            markup_message = (
+                "Interactive previews below highlight captured elements. Install 'pypdf>=3.9' "
+                "to enable downloadable annotated PDFs."
+            )
+        else:
+            markup_message = overlay_support.message
 
         material_cost = run.result.summary.get("material_cost", 0.0)
         labor_cost = run.result.summary.get("labor_cost", 0.0)
@@ -101,8 +113,8 @@ def create_app() -> FastAPI:
             "review_summary": run.review.summarize(),
             "csv": csv_payload,
             "markups": {
-                "supported": overlay_support.available,
-                "message": overlay_support.message,
+                "supported": markups_supported,
+                "message": markup_message,
                 "metadata": markup_metadata,
                 "overlays": [
                     {
@@ -112,6 +124,7 @@ def create_app() -> FastAPI:
                     }
                     for overlay in overlays
                 ],
+                "previews": [preview.to_dict() for preview in previews],
             },
         }
 

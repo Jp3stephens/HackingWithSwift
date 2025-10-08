@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional
 
 from .drawings import DrawingElement
-from .overlays import export_pdf_overlays
+from .overlays import export_markup_previews, export_pdf_overlays
 
 
 @dataclass
@@ -17,6 +17,7 @@ class MarkupExport:
 
     metadata: Optional[Path]
     overlays: List[Path]
+    previews: List[Path]
 
 
 def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> MarkupExport:
@@ -24,7 +25,8 @@ def export_markups(elements: Iterable[DrawingElement], output_path: Path) -> Mar
 
     metadata_path = _export_metadata(elements, output_path)
     overlay_paths = export_pdf_overlays(elements, output_path.parent)
-    return MarkupExport(metadata=metadata_path, overlays=overlay_paths)
+    preview_paths = export_markup_previews(elements, output_path.parent)
+    return MarkupExport(metadata=metadata_path, overlays=overlay_paths, previews=preview_paths)
 
 
 def collect_markup_metadata(elements: Iterable[DrawingElement]) -> List[dict]:

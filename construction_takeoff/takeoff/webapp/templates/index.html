@@ -316,12 +316,16 @@
                     </span>
                   </div>
 
+                  <p id="markup-info" class="mt-4 hidden text-sm text-slate-300"></p>
                   <p id="markup-empty" class="mt-6 rounded-2xl border border-slate-600/60 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
                     No markup highlights were captured for this takeoff yet. Use the manual measurement flow to add bounding boxes during review.
                   </p>
 
-                  <div class="mt-6 grid gap-6 lg:grid-cols-[1.6fr,1fr]">
-                    <div id="markup-gallery" class="grid gap-6 sm:grid-cols-2"></div>
+                  <div class="mt-6 grid gap-6 xl:grid-cols-[1.6fr,1fr]">
+                    <div class="space-y-6">
+                      <div id="markup-gallery" class="grid gap-6 sm:grid-cols-2"></div>
+                      <div id="markup-preview-container" class="space-y-6"></div>
+                    </div>
                     <div>
                       <h4 class="text-sm font-semibold text-slate-200">Captured elements</h4>
                       <ul id="markup-metadata" class="mt-3 space-y-3"></ul>

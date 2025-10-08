@@ -43,5 +43,7 @@ class TakeoffProject:
                 message = overlay_support.message
                 if message:
                     print(message)
+        for preview_path in markup_export.previews:
+            print(f"Interactive markup preview exported to {preview_path}")
         for overlay_path in markup_export.overlays:
             print(f"Markup overlay exported to {overlay_path}")
